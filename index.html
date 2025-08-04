@@ -1,0 +1,392 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  </head>
+  <body>
+<div x-data="{ showFirst: true }"
+     x-init="setInterval(() => showFirst = !showFirst, 5000)"
+     class="relative w-full h-64 overflow-hidden">
+
+  <!-- First Element -->
+  <div x-show="showFirst"
+       x-transition:enter="transition transform duration-1000"
+       x-transition:enter-start="-translate-x-full opacity-0"
+       x-transition:enter-end="translate-x-0 opacity-100"
+       x-transition:leave="transition transform duration-1000"
+       x-transition:leave-start="translate-x-0 opacity-100"
+       x-transition:leave-end="translate-x-full opacity-0"
+       class="absolute top-0 left-0 w-full h-full bg-blue-500 text-white flex items-center justify-center">
+    <p class="text-2xl font-bold">Element One</p>
+  </div>
+
+  <!-- Second Element -->
+  <div x-show="!showFirst"
+       x-transition:enter="transition transform duration-1000"
+       x-transition:enter-start="translate-x-full opacity-0"
+       x-transition:enter-end="translate-x-0 opacity-100"
+       x-transition:leave="transition transform duration-1000"
+       x-transition:leave-start="translate-x-0 opacity-100"
+       x-transition:leave-end="-translate-x-full opacity-0"
+       class="absolute top-0 left-0 w-full h-full bg-green-500 text-white flex items-center justify-center">
+    <p class="text-2xl font-bold">Element Two</p>
+  </div>
+</div>
+
+
+
+
+    <div x-data="dashboard()" x-init="fetchData()">
+
+    <div class="p-2 md:px-48">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md text-center flex flex-col justify-between">
+                <div class="flex justify-center">
+                    <div class="mr-2">Total Cost</div>
+                    <div class="mr-2" x-text="days"></div>
+                    <div>$</div>
+                    <div x-text="total_cost"></div>
+                </div>
+                <div class="p-6">
+                    <div class="text-center">Last Updated</div>
+                    <div x-text="last_updated"></div>
+                </div>
+            </div>
+
+            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md">
+                <div id="service-costs"></div>
+            </div>
+
+            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md">
+                <div id="line"></div>
+            </div>
+
+            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md">
+                <div id="regional-costs"></div>
+            </div>
+        </div>
+    </div>
+   
+  </div>
+
+  <script>
+    function dashboard() {
+      return {
+        total_cost:'',
+        last_updated:'',
+        daily_costs:[],
+        days:0,
+       
+
+        loading: true,
+        error: null,
+
+        fetchData() {
+            this.currentCosts();
+            this.weeklyTrends();
+            this.topServices();
+            this.regionalCosts();
+
+            
+        },
+
+        async currentCosts() {
+          try {
+            const response = await fetch('https://u91tjvw9n5.execute-api.eu-west-1.amazonaws.com/prod/api/current');
+            if (!response.ok) throw new Error('Network response was not ok');
+            
+            
+            data=await response.json()
+            console.log(data)
+            this.total_cost=Math.round(data.total_cost * 100) / 100;
+            this.daily_costs=data.daily_costs;
+            this.days="(" + data.daily_costs.length + "Days)"
+
+        
+            const date = new Date(data.last_updated);
+            this.last_updated = date.toLocaleString('en-GB', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+                });
+        
+            
+          } catch (err) {
+            this.error = err.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+        async weeklyTrends() {
+            try {
+            const response = await fetch('https://u91tjvw9n5.execute-api.eu-west-1.amazonaws.com/prod/api/weekly');
+            if (!response.ok) throw new Error('Network response was not ok');
+            data=await response.json(); 
+            this.lineChart(data) 
+
+          } catch (err) {
+            this.error = err.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+         async topServices() {
+            try {
+            const response = await fetch('https://u91tjvw9n5.execute-api.eu-west-1.amazonaws.com/prod/api/services');
+            if (!response.ok) throw new Error('Network response was not ok');
+            data=await response.json();  
+
+            AWS_Services=data.services
+           
+            title="AWS Services(Cost)"
+            xaxis = AWS_Services.map(item => item.service);
+            yaxis = AWS_Services.map(item => Math.round(item.cost * 100) / 100);
+            pct = AWS_Services.map(item => item.percentage);
+          
+            this.barChart("#service-costs",title,yaxis,xaxis)
+
+          } catch (err) {
+            this.error = err.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+         async regionalCosts() {
+            try {
+            const response = await fetch('https://u91tjvw9n5.execute-api.eu-west-1.amazonaws.com/prod/api/regions');
+            if (!response.ok) throw new Error('Network response was not ok');
+            AWS_Services=await response.json();  
+            
+
+            title="Regional Costs"
+            xaxis = AWS_Services.regions.map(item => item.region);
+        
+            yaxis = AWS_Services.regions.map(item => Math.round(item.cost * 100) / 100);
+
+            this.barChart("#regional-costs",title,yaxis,xaxis)
+           
+
+          } catch (err) {
+            this.error = err.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        barChart(divId,title,yxais,xaxis){
+
+           const chartConfig = {
+                series: [
+                    {
+                    name: title,
+                    data: yaxis,
+                    },
+                ],
+                chart: {
+                    type: "bar",
+                    height: 240,
+                    toolbar: {
+                    show: true,
+                    },
+                },
+                title: {
+                        text: title,
+                        align: 'center',
+                        margin: 10,
+                        offsetY: 0,
+                        style: {
+                        fontSize: '20px',
+                        fontWeight: 'bold',
+                        color: '#333'
+                        }
+
+                },
+                dataLabels: {
+                    enabled: false,
+                },
+                colors: ["#020617"],
+                plotOptions: {
+                    bar: {
+                    columnWidth: "40%",
+                    borderRadius: 2,
+                    },
+                },
+                xaxis: {
+                    axisTicks: {
+                    show: false,
+                    },
+                    axisBorder: {
+                    show: false,
+                    },
+                    labels: {
+                    style: {
+                        colors: "#616161",
+                        fontSize: "12px",
+                        fontFamily: "inherit",
+                        fontWeight: 400,
+                    },
+                    },
+                    categories: xaxis,
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function (value) {
+                        return `$${value.toLocaleString()}`;
+                        },
+
+                    style: {
+                        colors: "#616161",
+                        fontSize: "12px",
+                        fontFamily: "inherit",
+                        fontWeight: 400,
+                    },
+                    },
+                },
+                grid: {
+                    show: true,
+                    borderColor: "#dddddd",
+                    strokeDashArray: 5,
+                    xaxis: {
+                    lines: {
+                        show: true,
+                    },
+                    },
+                    padding: {
+                    top: 5,
+                    right: 20,
+                    },
+                },
+                fill: {
+                    colors:'#000066',
+                    opacity: 0.8,
+                },
+                tooltip: {
+                    theme: "dark",
+                },
+                };
+                
+                const chart = new ApexCharts(document.querySelector(divId), chartConfig);
+                
+                chart.render();
+            
+
+        },
+      lineChart(data){
+
+        dailyBreakdown = data.daily_breakdown
+
+        const day = dailyBreakdown.map(item => item.date);
+      
+  
+        const costs = dailyBreakdown.map(item => Math.round(item.cost * 100) / 100);
+       
+        const chartConfig = {
+            series: [
+                {
+                name: "Weekly Trend(Cost)",
+                data: costs,
+                },
+            ],
+            chart: {
+                type: "line",
+                height: 240,
+                toolbar: {
+                show: true,
+                },
+            },
+            title: {
+                text: 'Weekly Trend(Cost)',
+                align: 'center',
+                margin: 10,
+                offsetY: 0,
+                style: {
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#333'
+                }
+
+            },
+            dataLabels: {
+                enabled: false,
+            },
+            colors: ["#FF5733"],
+            stroke: {
+                width: 2,
+                lineCap: "round",
+                curve: "smooth",
+            },
+            markers: {
+                size: 0,
+            },
+            xaxis: {
+                axisTicks: {
+                show: false,
+                },
+                axisBorder: {
+                show: false,
+                },
+                labels: {
+                style: {
+                    colors: "#616161",
+                    fontSize: "12px",
+                    fontFamily: "inherit",
+                    fontWeight: 600,
+                },
+                },
+                categories: day,
+            },
+            yaxis: {
+                labels: {
+                    formatter: function (value) {
+                        return `$${value.toLocaleString()}`;
+                        },
+                style: {
+                    colors: "#616161",
+                    fontSize: "12px",
+                    fontFamily: "inherit",
+                    fontWeight: 600,
+                },
+                },
+            },
+            grid: {
+                show: true,
+                borderColor: "#dddddd",
+                strokeDashArray: 5,
+                xaxis: {
+                lines: {
+                    show: true,
+                },
+                },
+                padding: {
+                top: 5,
+                right: 20,
+                },
+            },
+            fill: {
+                colors: ['#000099'],
+                opacity: 0.8,
+            },
+            tooltip: {
+                theme: "dark",
+            },
+            };
+            
+            const chart = new ApexCharts(document.querySelector("#line"), chartConfig);
+            
+            chart.render();
+      }
+      }
+    }
+  </script>
+
+
+  </body>
+</html>
