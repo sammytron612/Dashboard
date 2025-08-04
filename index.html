@@ -1,21 +1,23 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    
+
   </head>
-  <body class="dark">
+  <body class="bg-gray-700">
 
     <div x-data="dashboard()" x-init="fetchData()">
 
     <div class="p-2 md:px-48">
-        <h2 class="text-center my-4 text-2xl font-bold">AWS Cost Dashboard</h2>
-        <h4 class="text-center my-4 text-lg">Real time visibility into your AWS costs</h4>
+        <h2 class="text-center my-4 text-2xl font-bold text-gray-100">AWS Cost Dashboard</h2>
+        <h4 class="text-center my-4 text-lg text-gray-100">Real time visibility into your AWS costs</h4>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 lg:px-16">
-            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md text-center flex flex-col justify-between">
+            <div class="bg-white pt-6 px-2 pb-0 w-full border-1 shadow-md text-center flex flex-col justify-between">
                 <div class="flex justify-center text-xl font-bold">
                     <div class="mr-2">Total Cost</div>
                     <div class="mr-2" x-text="days"></div>
@@ -28,9 +30,9 @@
                 </div>
             </div>
 
-            <div style="height:340px" x-data="{ showFirst: true }"
+            <div style="height:380px" x-data="{ showFirst: true }"
                         x-init="setInterval(() => showFirst = !showFirst, 5000)"
-                        class="relative w-full overflow-hidden pt-3 px-2 pb-0 w-full border-1 shadow-md">
+                        class="bg-white relative w-full overflow-hidden pt-3 px-2 pb-0 w-full border-1 shadow-md">
                 <div x-show="showFirst"
                         x-transition:enter="transition transform duration-1000"
                         x-transition:enter-start="-translate-x-full opacity-0"
@@ -42,7 +44,7 @@
                     <div id="service-costs"></div>
                 </div>
                 <!-- Second Element -->
-                <div style="height:340px" x-show="!showFirst"
+                <div style="height:380px" x-show="!showFirst"
                     x-transition:enter="transition transform duration-1000"
                     x-transition:enter-start="translate-x-full opacity-0"
                     x-transition:enter-end="translate-x-0 opacity-100"
@@ -71,13 +73,53 @@
                 </div>
             </div>
 
-            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md">
+            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md bg-white">
                 <div id="line"></div>
             </div>
 
-            <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md">
-                <div id="regional-costs"></div>
+            <div style="height:380px" x-data="{ showFirst: true }"
+                        x-init="setInterval(() => showFirst = !showFirst, 5000)"
+                        class="bg-white relative w-full overflow-hidden pt-3 px-2 pb-0 w-full border-1 shadow-md">
+                <div x-show="showFirst"
+                        x-transition:enter="transition transform duration-1000"
+                        x-transition:enter-start="-translate-x-full opacity-0"
+                        x-transition:enter-end="translate-x-0 opacity-100"
+                        x-transition:leave="transition transform duration-1000"
+                        x-transition:leave-start="translate-x-0 opacity-100"
+                        x-transition:leave-end="translate-x-full opacity-0"
+                        class="absolute top-0 left-0 w-full h-full">
+                    <div id="regional-costs"></div>
+                </div>
+                <!-- Second Element -->
+                <div style="height:380px;" x-show="!showFirst"
+                    x-transition:enter="transition transform duration-1000"
+                    x-transition:enter-start="translate-x-full opacity-0"
+                    x-transition:enter-end="translate-x-0 opacity-100"
+                    x-transition:leave="transition transform duration-1000"
+                    x-transition:leave-start="translate-x-0 opacity-100"
+                    x-transition:leave-end="-translate-x-full opacity-0"
+                    class="absolute top-0 left-0 w-full h-full p-4">
+                    <table class="table-fixed w-full h-full">
+                        <thead>
+                            <tr>
+                                <th class="p-1 border-b border-gray-300">No</th>
+                                <th class="p-1 border-b border-gray-300 w-4/5">Region</th>
+                                <th class="p-1 border-b border-gray-300">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <template x-for="(region,index) in regions" :key="index">
+                            <tr>
+                                <td x-text="index+1" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
+                                <td x-text="region" class="w-4/5 p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
+                                <td x-text="'$' + region_costs[index]" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
+                            </tr>
+                        </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+            
         </div>
     </div>
    
@@ -93,6 +135,8 @@
         top_services:[],
         top_costs:[],
         top_pct:[],
+        regions:[],
+        region_costs:[],
 
         loading: true,
         error: null,
@@ -179,12 +223,15 @@
             const response = await fetch('https://u91tjvw9n5.execute-api.eu-west-1.amazonaws.com/prod/api/regions');
             if (!response.ok) throw new Error('Network response was not ok');
             AWS_Services=await response.json();  
+          
             
-
             title="Regional Costs"
             xaxis = AWS_Services.regions.map(item => item.region);
         
             yaxis = AWS_Services.regions.map(item => Math.round(item.cost * 100) / 100);
+
+            this.regions=xaxis;
+            this.region_costs=yaxis;
 
             this.barChart("#regional-costs",title,yaxis,xaxis)
            
