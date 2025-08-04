@@ -12,7 +12,7 @@
     <div x-data="dashboard()" x-init="fetchData()">
 
     <div class="p-2 md:px-48">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 lg:px-16">
             <div class="pt-6 px-2 pb-0 w-full border-1 shadow-md text-center flex flex-col justify-between">
                 <div class="flex justify-center">
                     <div class="mr-2">Total Cost</div>
@@ -312,7 +312,7 @@
                 type: "line",
                 height: 340,
                 toolbar: {
-                show: true,
+                show: false,
                 },
             },
             title: {
