@@ -58,7 +58,7 @@
                     x-transition:leave-start="translate-x-0 opacity-100"
                     x-transition:leave-end="-translate-x-full opacity-0"
                     class="absolute top-0 left-0 w-full h-full p-4">
-                    <div class="text-xl font-bold mb-1 text-center">AWS Services(Cost per service)</div>
+                    <div class="text-xl font-bold mb-1 text-center">AWS Services(cost per service)</div>
                     <table class="table-fixed w-full">
                         <thead>
                             <tr>
@@ -227,7 +227,7 @@
 
             AWS_Services=data.services
            
-            title="AWS Services(Cost per service)"
+            title="AWS Services(cost per service)"
             xaxis = AWS_Services.map(item => item.service);
             yaxis = AWS_Services.map(item => Math.round(item.cost * 100) / 100);
             pct = AWS_Services.map(item => item.percentage);
