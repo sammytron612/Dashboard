@@ -59,20 +59,22 @@
                     x-transition:leave-end="-translate-x-full opacity-0"
                     class="absolute top-0 left-0 w-full h-full p-4">
                     <div class="text-xl font-bold mb-1 text-center">AWS Services(cost per service)</div>
-                    <table class="table-fixed w-full">
+                    <table class="w-full">
                         <thead>
                             <tr>
                                 <th class="p-1 border-b border-gray-300">No</th>
-                                <th class="p-1 border-b border-gray-300 w-4/5">Service</th>
+                                <th class="p-1 border-b border-gray-300 w-4/5 text-center">Service</th>
                                 <th class="p-1 border-b border-gray-300">Cost</th>
+                                <th class="p-1 border-b border-gray-300">%</th>
                             </tr>
                         </thead>
                         <tbody>
                         <template x-for="(service,index) in top_services" :key="index">
                             <tr>
                                 <td x-text="index+1" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
-                                <td x-text="service" class="w-4/5 p-1 border-b border-gray-300 mb-1 text-sm"></td>
-                                <td x-text="'$' + top_costs[index]" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
+                                <td x-text="service" class="w-2/3 p-1 border-b border-gray-300 mb-1 text-sm"></td>
+                                <td x-text="'$' + top_costs[index]" class="p-1 border-b border-gray-300 mb-1 mr-1 text-sm text-center"></td>
+                                <td x-text="top_pct[index]" class="p-1 border-b border-gray-300 mb-1 ml-1 text-sm text-center"></td>
                             </tr>
                         </template>
                         </tbody>
@@ -108,12 +110,13 @@
                     x-transition:leave-end="-translate-x-full opacity-0"
                     class="absolute top-0 left-0 w-full h-full p-4">
                     <div class="text-xl font-bold mb-1 text-center">Regional Costs</div>
-                    <table class="table-fixed w-full h-full">
+                    <table class="w-full h-full">
                         <thead>
                             <tr>
                                 <th class="p-1 border-b border-gray-300">No</th>
                                 <th class="p-1 border-b border-gray-300 w-4/5">Region</th>
                                 <th class="p-1 border-b border-gray-300">Cost</th>
+                                <th class="p-1 border-b border-gray-300">%</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -122,6 +125,7 @@
                                 <td x-text="index+1" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
                                 <td x-text="region" class="w-4/5 p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
                                 <td x-text="'$' + region_costs[index]" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
+                                <td x-text="region_pct[index]" class="p-1 border-b border-gray-300 mb-1 text-sm text-center"></td>
                             </tr>
                         </template>
                         </tbody>
@@ -149,6 +153,7 @@
         top_pct:[],
         regions:[],
         region_costs:[],
+        region_pct:[],
 
         loadingCost: true,
         loadingServices: true,
@@ -182,7 +187,7 @@
             
             
             data=await response.json()
-            console.log(data)
+           
             this.total_cost=Math.round(data.total_cost * 100) / 100;
             this.daily_costs=data.daily_costs;
             this.days="(" + data.daily_costs.length + " Days)"
@@ -230,7 +235,7 @@
             title="AWS Services(cost per service)"
             xaxis = AWS_Services.map(item => item.service);
             yaxis = AWS_Services.map(item => Math.round(item.cost * 100) / 100);
-            pct = AWS_Services.map(item => item.percentage);
+            pct = AWS_Services.map(item => Math.round(item.percentage * 100) / 100);
             this.top_services = xaxis;
             this.top_costs = yaxis;
             this.top_pct = pct;
@@ -254,9 +259,22 @@
             xaxis = AWS_Services.regions.map(item => item.region);
         
             yaxis = AWS_Services.regions.map(item => Math.round(item.cost * 100) / 100);
-
+          
             this.regions=xaxis;
             this.region_costs=yaxis;
+
+            total = AWS_Services.total_cost
+            
+            yaxis.forEach((cost, index) => {
+                pct = (cost / total ) * 100
+                
+                rounded = Math.round(pct * 100) / 100
+                
+                this.region_pct.push(rounded)
+            });
+
+            console.log(this.region_pct)
+
 
             this.barChart("#regional-costs",title,yaxis,xaxis)
            
